@@ -1,0 +1,172 @@
+{
+  "name": "LXD Server",
+  "description": "LXD-style infrastructure access: identity/service_account → group → server → project → instance.",
+  "tags": ["infrastructure", "lxd", "server", "rbac"],
+  "model": {
+    "schema_version": "1.1",
+    "types": [
+      { "name": "identity", "relations": [] },
+      { "name": "service_account", "relations": [] },
+      {
+        "name": "group",
+        "relations": [
+          {
+            "name": "member",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "identity", "relation": null, "wildcard": false, "condition": null },
+                { "type": "service_account", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          }
+        ]
+      },
+      {
+        "name": "server",
+        "relations": [
+          {
+            "name": "admin",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "identity", "relation": null, "wildcard": false, "condition": null },
+                { "type": "group", "relation": "member", "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "operator",
+            "expression": {
+              "kind": "union",
+              "children": [
+                {
+                  "kind": "direct",
+                  "grants": [
+                    { "type": "identity", "relation": null, "wildcard": false, "condition": null },
+                    { "type": "group", "relation": "member", "wildcard": false, "condition": null }
+                  ]
+                },
+                { "kind": "ref", "relation": "admin" }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "viewer",
+            "expression": {
+              "kind": "union",
+              "children": [
+                {
+                  "kind": "direct",
+                  "grants": [
+                    { "type": "identity", "relation": null, "wildcard": false, "condition": null },
+                    { "type": "group", "relation": "member", "wildcard": false, "condition": null }
+                  ]
+                },
+                { "kind": "ref", "relation": "operator" }
+              ]
+            },
+            "comment": null
+          }
+        ]
+      },
+      {
+        "name": "project",
+        "relations": [
+          {
+            "name": "server",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "server", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "manager",
+            "expression": {
+              "kind": "union",
+              "children": [
+                {
+                  "kind": "direct",
+                  "grants": [
+                    { "type": "identity", "relation": null, "wildcard": false, "condition": null },
+                    { "type": "group", "relation": "member", "wildcard": false, "condition": null }
+                  ]
+                },
+                { "kind": "from", "source_relation": "admin", "parent_relation": "server" }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "operator",
+            "expression": {
+              "kind": "union",
+              "children": [
+                {
+                  "kind": "direct",
+                  "grants": [
+                    { "type": "identity", "relation": null, "wildcard": false, "condition": null },
+                    { "type": "group", "relation": "member", "wildcard": false, "condition": null }
+                  ]
+                },
+                { "kind": "ref", "relation": "manager" }
+              ]
+            },
+            "comment": null
+          }
+        ]
+      },
+      {
+        "name": "instance",
+        "relations": [
+          {
+            "name": "project",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "project", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "can_exec",
+            "expression": {
+              "kind": "from",
+              "source_relation": "operator",
+              "parent_relation": "project"
+            },
+            "comment": null
+          },
+          {
+            "name": "can_view",
+            "expression": {
+              "kind": "from",
+              "source_relation": "operator",
+              "parent_relation": "project"
+            },
+            "comment": null
+          }
+        ]
+      }
+    ],
+    "conditions": []
+  },
+  "canvas_state": {
+    "nodes": [
+      { "id": "identity", "position": { "x": 50, "y": 100 } },
+      { "id": "service_account", "position": { "x": 50, "y": 300 } },
+      { "id": "group", "position": { "x": 300, "y": 200 } },
+      { "id": "server", "position": { "x": 550, "y": 200 } },
+      { "id": "project", "position": { "x": 800, "y": 200 } },
+      { "id": "instance", "position": { "x": 1050, "y": 200 } }
+    ],
+    "viewport": { "x": 0, "y": 0, "zoom": 0.85 }
+  }
+}

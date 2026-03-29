@@ -1,0 +1,161 @@
+{
+  "name": "Multi-Tenant SaaS",
+  "description": "Multi-actor tenant hierarchy (employee/customer/app → system → org → project → task).",
+  "tags": ["multi-tenant", "saas", "hierarchy"],
+  "model": {
+    "schema_version": "1.1",
+    "types": [
+      { "name": "employee", "relations": [] },
+      { "name": "customer", "relations": [] },
+      { "name": "application", "relations": [] },
+      {
+        "name": "system",
+        "relations": [
+          {
+            "name": "admin",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "employee", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          }
+        ]
+      },
+      {
+        "name": "organization",
+        "relations": [
+          {
+            "name": "system",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "system", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "owner",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "customer", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "member",
+            "expression": {
+              "kind": "union",
+              "children": [
+                {
+                  "kind": "direct",
+                  "grants": [
+                    { "type": "customer", "relation": null, "wildcard": false, "condition": null },
+                    { "type": "application", "relation": null, "wildcard": false, "condition": null }
+                  ]
+                },
+                { "kind": "ref", "relation": "owner" }
+              ]
+            },
+            "comment": null
+          }
+        ]
+      },
+      {
+        "name": "project",
+        "relations": [
+          {
+            "name": "organization",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "organization", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "owner",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "customer", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "member",
+            "expression": {
+              "kind": "union",
+              "children": [
+                {
+                  "kind": "direct",
+                  "grants": [
+                    { "type": "customer", "relation": null, "wildcard": false, "condition": null }
+                  ]
+                },
+                { "kind": "ref", "relation": "owner" },
+                { "kind": "from", "source_relation": "member", "parent_relation": "organization" }
+              ]
+            },
+            "comment": null
+          }
+        ]
+      },
+      {
+        "name": "task",
+        "relations": [
+          {
+            "name": "project",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "project", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "assignee",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "customer", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "can_view",
+            "expression": {
+              "kind": "union",
+              "children": [
+                { "kind": "ref", "relation": "assignee" },
+                { "kind": "from", "source_relation": "member", "parent_relation": "project" }
+              ]
+            },
+            "comment": null
+          }
+        ]
+      }
+    ],
+    "conditions": []
+  },
+  "canvas_state": {
+    "nodes": [
+      { "id": "employee", "position": { "x": 50, "y": 50 } },
+      { "id": "customer", "position": { "x": 50, "y": 200 } },
+      { "id": "application", "position": { "x": 50, "y": 350 } },
+      { "id": "system", "position": { "x": 300, "y": 50 } },
+      { "id": "organization", "position": { "x": 550, "y": 200 } },
+      { "id": "project", "position": { "x": 800, "y": 200 } },
+      { "id": "task", "position": { "x": 1050, "y": 200 } }
+    ],
+    "viewport": { "x": 0, "y": 0, "zoom": 0.8 }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "openfga",
+  "owner": "openfga",
+  "repo": "agent-skills",
+  "path": "skills/openfga",
+  "branch": "main",
+  "sha": "85c4e463936c50c237b1d949b38248f01c3ea7ff",
+  "source": "manual"
+}

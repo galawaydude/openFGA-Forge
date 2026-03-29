@@ -1,0 +1,131 @@
+{
+  "name": "Bank Transfers",
+  "description": "Account access with intersection guards and conditional transfer limits.",
+  "tags": ["banking", "fintech", "intersection", "conditions"],
+  "model": {
+    "schema_version": "1.1",
+    "types": [
+      { "name": "customer", "relations": [] },
+      { "name": "employee", "relations": [] },
+      {
+        "name": "bank",
+        "relations": [
+          {
+            "name": "admin",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "employee", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "transfer_limit_policy",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "employee", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          }
+        ]
+      },
+      {
+        "name": "account",
+        "relations": [
+          {
+            "name": "bank",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "bank", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "owner",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "customer", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "account_manager",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "employee", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "delegate",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "customer", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "can_view",
+            "expression": {
+              "kind": "union",
+              "children": [
+                { "kind": "ref", "relation": "owner" },
+                { "kind": "ref", "relation": "account_manager" },
+                { "kind": "ref", "relation": "delegate" }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "can_make_bank_transfer",
+            "expression": {
+              "kind": "intersection",
+              "children": [
+                {
+                  "kind": "union",
+                  "children": [
+                    { "kind": "ref", "relation": "owner" },
+                    { "kind": "ref", "relation": "account_manager" },
+                    { "kind": "ref", "relation": "delegate" }
+                  ]
+                },
+                { "kind": "from", "source_relation": "transfer_limit_policy", "parent_relation": "bank" }
+              ]
+            },
+            "comment": null
+          }
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "name": "within_transfer_limit",
+        "parameters": [
+          { "name": "amount", "type": "double" },
+          { "name": "limit", "type": "double" }
+        ],
+        "expression": "amount <= limit"
+      }
+    ]
+  },
+  "canvas_state": {
+    "nodes": [
+      { "id": "customer", "position": { "x": 50, "y": 100 } },
+      { "id": "employee", "position": { "x": 50, "y": 300 } },
+      { "id": "bank", "position": { "x": 350, "y": 200 } },
+      { "id": "account", "position": { "x": 650, "y": 200 } }
+    ],
+    "viewport": { "x": 0, "y": 0, "zoom": 1 }
+  }
+}

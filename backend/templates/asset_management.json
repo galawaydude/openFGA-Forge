@@ -1,0 +1,164 @@
+{
+  "name": "Asset Management",
+  "description": "Asset access with hyphenated type names: user → team → role → org → asset-category → asset.",
+  "tags": ["assets", "rbac", "hyphenated-types"],
+  "model": {
+    "schema_version": "1.1",
+    "types": [
+      { "name": "user", "relations": [] },
+      {
+        "name": "team",
+        "relations": [
+          {
+            "name": "member",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "user", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          }
+        ]
+      },
+      {
+        "name": "role",
+        "relations": [
+          {
+            "name": "assignee",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "user", "relation": null, "wildcard": false, "condition": null },
+                { "type": "team", "relation": "member", "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          }
+        ]
+      },
+      {
+        "name": "organization",
+        "relations": [
+          {
+            "name": "admin",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "user", "relation": null, "wildcard": false, "condition": null },
+                { "type": "role", "relation": "assignee", "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "asset_viewer",
+            "expression": {
+              "kind": "union",
+              "children": [
+                {
+                  "kind": "direct",
+                  "grants": [
+                    { "type": "role", "relation": "assignee", "wildcard": false, "condition": null }
+                  ]
+                },
+                { "kind": "ref", "relation": "admin" }
+              ]
+            },
+            "comment": null
+          }
+        ]
+      },
+      {
+        "name": "asset-category",
+        "relations": [
+          {
+            "name": "org",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "organization", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "commenter",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "role", "relation": "assignee", "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "viewer",
+            "expression": {
+              "kind": "union",
+              "children": [
+                {
+                  "kind": "direct",
+                  "grants": [
+                    { "type": "role", "relation": "assignee", "wildcard": false, "condition": null }
+                  ]
+                },
+                { "kind": "ref", "relation": "commenter" },
+                { "kind": "from", "source_relation": "asset_viewer", "parent_relation": "org" }
+              ]
+            },
+            "comment": null
+          }
+        ]
+      },
+      {
+        "name": "asset",
+        "relations": [
+          {
+            "name": "category",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "asset-category", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "owner",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "user", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "can_view",
+            "expression": {
+              "kind": "union",
+              "children": [
+                { "kind": "ref", "relation": "owner" },
+                { "kind": "from", "source_relation": "viewer", "parent_relation": "category" }
+              ]
+            },
+            "comment": null
+          }
+        ]
+      }
+    ],
+    "conditions": []
+  },
+  "canvas_state": {
+    "nodes": [
+      { "id": "user", "position": { "x": 50, "y": 200 } },
+      { "id": "team", "position": { "x": 280, "y": 100 } },
+      { "id": "role", "position": { "x": 280, "y": 300 } },
+      { "id": "organization", "position": { "x": 530, "y": 200 } },
+      { "id": "asset-category", "position": { "x": 780, "y": 200 } },
+      { "id": "asset", "position": { "x": 1030, "y": 200 } }
+    ],
+    "viewport": { "x": 0, "y": 0, "zoom": 0.9 }
+  }
+}

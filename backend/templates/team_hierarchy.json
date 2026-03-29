@@ -1,0 +1,152 @@
+{
+  "name": "Team Hierarchy",
+  "description": "Nested ownership chain: user → team → project → environment → snapshot.",
+  "tags": ["teams", "ownership", "hierarchy", "devops"],
+  "model": {
+    "schema_version": "1.1",
+    "types": [
+      { "name": "user", "relations": [] },
+      {
+        "name": "team",
+        "relations": [
+          {
+            "name": "owner",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "user", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "member",
+            "expression": {
+              "kind": "union",
+              "children": [
+                {
+                  "kind": "direct",
+                  "grants": [
+                    { "type": "user", "relation": null, "wildcard": false, "condition": null }
+                  ]
+                },
+                { "kind": "ref", "relation": "owner" }
+              ]
+            },
+            "comment": null
+          }
+        ]
+      },
+      {
+        "name": "project",
+        "relations": [
+          {
+            "name": "team",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "team", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "owner",
+            "expression": {
+              "kind": "union",
+              "children": [
+                {
+                  "kind": "direct",
+                  "grants": [
+                    { "type": "user", "relation": null, "wildcard": false, "condition": null }
+                  ]
+                },
+                { "kind": "from", "source_relation": "owner", "parent_relation": "team" }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "member",
+            "expression": {
+              "kind": "union",
+              "children": [
+                { "kind": "ref", "relation": "owner" },
+                { "kind": "from", "source_relation": "member", "parent_relation": "team" }
+              ]
+            },
+            "comment": null
+          }
+        ]
+      },
+      {
+        "name": "environment",
+        "relations": [
+          {
+            "name": "project",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "project", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "can_deploy",
+            "expression": {
+              "kind": "from",
+              "source_relation": "owner",
+              "parent_relation": "project"
+            },
+            "comment": null
+          },
+          {
+            "name": "can_view",
+            "expression": {
+              "kind": "from",
+              "source_relation": "member",
+              "parent_relation": "project"
+            },
+            "comment": null
+          }
+        ]
+      },
+      {
+        "name": "snapshot",
+        "relations": [
+          {
+            "name": "environment",
+            "expression": {
+              "kind": "direct",
+              "grants": [
+                { "type": "environment", "relation": null, "wildcard": false, "condition": null }
+              ]
+            },
+            "comment": null
+          },
+          {
+            "name": "can_view",
+            "expression": {
+              "kind": "from",
+              "source_relation": "can_view",
+              "parent_relation": "environment"
+            },
+            "comment": null
+          }
+        ]
+      }
+    ],
+    "conditions": []
+  },
+  "canvas_state": {
+    "nodes": [
+      { "id": "user", "position": { "x": 50, "y": 200 } },
+      { "id": "team", "position": { "x": 300, "y": 200 } },
+      { "id": "project", "position": { "x": 550, "y": 200 } },
+      { "id": "environment", "position": { "x": 800, "y": 200 } },
+      { "id": "snapshot", "position": { "x": 1050, "y": 200 } }
+    ],
+    "viewport": { "x": 0, "y": 0, "zoom": 0.9 }
+  }
+}
