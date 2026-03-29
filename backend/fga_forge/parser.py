@@ -72,7 +72,14 @@ class _Parser:
             elif stripped.startswith("condition "):
                 model.conditions.append(self._parse_condition())
             elif stripped.startswith("#"):
-                self._consume()  # skip top-level comments
+                # Collect consecutive comment lines; attach to the following type if any
+                comment = self._consume_comment_block()
+                nxt = self._peek()
+                if nxt is not None and (nxt.strip().startswith("type ") or nxt.strip() == "type"):
+                    td = self._parse_type()
+                    td.comment = comment
+                    model.types.append(td)
+                # else: model-level comment with no following type — silently discard
             else:
                 raise _ParseError(f"Unexpected token: {stripped!r}", line=self._line_num())
 
@@ -80,12 +87,21 @@ class _Parser:
 
     # ── type block ──────────────────────────────────────────────────────────
 
+    def _consume_comment_block(self) -> str:
+        """Consume consecutive # lines and return their bodies joined by newlines."""
+        body_lines = []
+        while self._peek() is not None and self._peek().strip().startswith("#"):
+            body_lines.append(self._consume().strip()[1:].strip())
+        return "\n".join(body_lines)
+
     def _parse_type(self) -> TypeDef:
         line = self._consume()
         m = re.match(r"^type\s+(\S+)", line.strip())
         if not m:
             raise _ParseError(f"Invalid type declaration: {line.strip()!r}", line=self.pos)
         name = m.group(1)
+        if not re.match(r"^[a-z][a-z0-9_-]*$", name):
+            raise _ParseError(f"Invalid type name: {name!r}", line=self.pos)
         type_def = TypeDef(name=name)
 
         next_line = self._peek()
@@ -105,14 +121,17 @@ class _Parser:
         return type_def
 
     def _parse_relation(self) -> RelationDef:
-        line = self._consume()
-        stripped = line.strip()
-
-        comment = None
-        if stripped.startswith("#"):
-            comment = stripped[1:].strip()
+        # Consume and accumulate any leading # comment lines, then the define line
+        comment_lines = []
+        while True:
             line = self._consume()
             stripped = line.strip()
+            if stripped.startswith("#"):
+                comment_lines.append(stripped[1:].strip())
+            else:
+                break  # must be the define line
+
+        comment = "\n".join(comment_lines) if comment_lines else None
 
         m = re.match(r"^define\s+([a-z][a-z0-9_]*)\s*:\s*(.+)$", stripped)  # no hyphens in relation names
         if not m:
@@ -214,11 +233,22 @@ class _Parser:
             condition = with_m.group(2)
 
         if ":*" in s:
-            return TypeRestriction(type=s.replace(":*", "").strip(), wildcard=True, condition=condition)
+            type_name = s.replace(":*", "").strip()
+            if not re.match(r"^[a-z][a-z0-9_-]*$", type_name):
+                raise _ParseError(f"Invalid type name in grant: {type_name!r}")
+            return TypeRestriction(type=type_name, wildcard=True, condition=condition)
         if "#" in s:
             parts = s.split("#", 1)
-            return TypeRestriction(type=parts[0].strip(), relation=parts[1].strip(), condition=condition)
-        return TypeRestriction(type=s.strip(), condition=condition)
+            type_name, rel_name = parts[0].strip(), parts[1].strip()
+            if not re.match(r"^[a-z][a-z0-9_-]*$", type_name):
+                raise _ParseError(f"Invalid type name in grant: {type_name!r}")
+            if not re.match(r"^[a-z][a-z0-9_]*$", rel_name):
+                raise _ParseError(f"Invalid relation name in grant: {rel_name!r}")
+            return TypeRestriction(type=type_name, relation=rel_name, condition=condition)
+        type_name = s.strip()
+        if not re.match(r"^[a-z][a-z0-9_-]*$", type_name):
+            raise _ParseError(f"Invalid type name in grant: {type_name!r}")
+        return TypeRestriction(type=type_name, condition=condition)
 
     # ── bracket / paren helpers ─────────────────────────────────────────────
 

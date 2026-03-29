@@ -62,7 +62,11 @@ def model_to_dict(model: FGAModel) -> dict:
 
 
 def compile_model(data: dict) -> dict:
-    result = fga_compile(dict_to_model(data))
+    try:
+        model = dict_to_model(data)
+    except (ValueError, KeyError, TypeError, IndexError) as e:
+        return {"success": False, "errors": [{"code": "INVALID_IR", "message": f"Malformed IR: {e}"}]}
+    result = fga_compile(model)
     if isinstance(result, CompileSuccess):
         return {"success": True, "dsl": result.dsl}
     return {"success": False, "errors": [asdict(e) for e in result.errors]}
@@ -76,7 +80,11 @@ def parse_dsl(dsl: str) -> dict:
 
 
 def validate_model(data: dict) -> dict:
-    errors = fga_validate(dict_to_model(data))
+    try:
+        model = dict_to_model(data)
+    except (ValueError, KeyError, TypeError, IndexError) as e:
+        return {"valid": False, "errors": [{"code": "INVALID_IR", "message": f"Malformed IR: {e}"}]}
+    errors = fga_validate(model)
     return {"valid": len(errors) == 0, "errors": [asdict(e) for e in errors]}
 
 

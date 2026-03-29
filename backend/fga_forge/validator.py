@@ -44,6 +44,74 @@ def _collect_target_types(
     return set()
 
 
+def _collect_self_from_deps(
+    expr: RelationExpression,
+    type_name: str,
+    rel_name: str,
+    type_target_map: dict[str, dict[str, set[str]]],
+    deps: dict[str, set[str]],
+) -> None:
+    """
+    Populate deps[rel_name] with the source relations that rel_name depends on
+    via from traversals that loop back to the same type.
+    """
+    if expr.kind == "from":
+        targets = type_target_map.get(type_name, {}).get(expr.parent_relation, set())
+        if type_name in targets:
+            deps[rel_name].add(expr.source_relation)
+    elif expr.kind in ("union", "intersection"):
+        for child in expr.children:
+            _collect_self_from_deps(child, type_name, rel_name, type_target_map, deps)
+
+
+def _check_circular_from_chains(
+    td,
+    type_target_map: dict[str, dict[str, set[str]]],
+    errors: list[ValidationError],
+) -> None:
+    """
+    Detect from-only cycles within a single type.
+
+    Example: given type T with parent: [T], a: b from parent, b: a from parent —
+    a depends on b (on T via parent) and b depends on a (on T via parent) → cycle.
+    """
+    type_name = td.name
+    deps: dict[str, set[str]] = {rd.name: set() for rd in td.relations}
+
+    for rd in td.relations:
+        if rd.expression is not None:
+            _collect_self_from_deps(rd.expression, type_name, rd.name, type_target_map, deps)
+
+    # DFS cycle detection (three-colour: unvisited / in-stack / done)
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color: dict[str, int] = {}
+
+    def dfs(node: str) -> bool:
+        color[node] = GRAY
+        for neighbour in deps.get(node, set()):
+            state = color.get(neighbour, WHITE)
+            if state == GRAY:
+                return True   # back-edge → cycle
+            if state == WHITE and dfs(neighbour):
+                return True
+        color[node] = BLACK
+        return False
+
+    for rel_name in deps:
+        if color.get(rel_name, WHITE) == WHITE:
+            if dfs(rel_name):
+                errors.append(ValidationError(
+                    code="CIRCULAR_FROM_CHAIN",
+                    message=(
+                        f"Circular 'from' chain detected in type '{type_name}' "
+                        f"(starting at relation '{rel_name}')"
+                    ),
+                    type_name=type_name,
+                    relation_name=rel_name,
+                ))
+                break  # one error per type is enough
+
+
 def validate(model: FGAModel) -> list[ValidationError]:
     errors: list[ValidationError] = []
     type_names: set[str] = set()
@@ -120,6 +188,10 @@ def validate(model: FGAModel) -> list[ValidationError]:
             type_target_map[type_name][rel_name] = _collect_target_types(
                 expr, type_name, rel_expr_map
             )
+
+    # ── Pass 2b: detect circular from chains ────────────────────────────────
+    for td in model.types:
+        _check_circular_from_chains(td, type_target_map, errors)
 
     # ── Pass 3: validate each relation expression ───────────────────────────
     for td in model.types:

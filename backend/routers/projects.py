@@ -103,14 +103,19 @@ async def import_project(request: Request, db: AsyncSession = Depends(get_db)):
     content_type = request.headers.get("content-type", "")
     body = await request.body()
     if "application/json" in content_type:
-        data = _json.loads(body)
+        try:
+            data = _json.loads(body)
+        except _json.JSONDecodeError as e:
+            raise HTTPException(400, f"Invalid JSON: {e}")
         if "model_json" in data and "name" in data:
             p = await project_service.create_project(
                 db, data["name"], data.get("description", ""),
                 data["model_json"], data.get("canvas_state", {}),
             )
             return _serialize(p)
-        if "schema_version" in data and "types" in data:
+        # Accept both snake_case (backend IR) and camelCase (spec.md / OpenFGA native)
+        has_ir_root = ("schema_version" in data or "schemaVersion" in data) and "types" in data
+        if has_ir_root:
             p = await project_service.create_project(
                 db,
                 f"Imported ({datetime.now().strftime('%Y-%m-%d %H:%M')})",

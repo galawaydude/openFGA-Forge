@@ -45,20 +45,23 @@ def emit(model: FGAModel) -> str:
 
     for type_def in model.types:
         if type_def.comment:
-            lines.append(f"# {type_def.comment}")
+            for comment_line in type_def.comment.split("\n"):
+                lines.append(f"# {comment_line}")
         lines.append(f"type {type_def.name}")
         if type_def.relations:
             lines.append("  relations")
             for rel in type_def.relations:
                 if rel.comment:
-                    lines.append(f"    # {rel.comment}")
+                    for comment_line in rel.comment.split("\n"):
+                        lines.append(f"    # {comment_line}")
                 expr_str = emit_expression(rel.expression)
                 lines.append(f"    define {rel.name}: {expr_str}")
 
     for cond in model.conditions:
         params = ", ".join(f"{p.name}: {p.type}" for p in cond.parameters)
         lines.append(f"condition {cond.name}({params}) {{")
-        lines.append(f"  {cond.expression}")
+        for expr_line in cond.expression.split("\n"):
+            lines.append(f"  {expr_line}")
         lines.append("}")
 
     return "\n".join(lines) + "\n"
